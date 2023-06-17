@@ -87,7 +87,7 @@ def register():
                 msg = 'Username must contain only characters and numbers!'
                 code=401
             else:
-                cursor.execute('INSERT INTO users VALUES ( null,%s, %s, %s, %s, %s)', (name, age, gender, email,password ))
+                cursor.execute('INSERT INTO users VALUES ( null,%s, %s, %s, %s, %s)', (name, email, password, gender,age ))
                 mysql.connection.commit()
                 msg = 'You have successfully registered!'
         else:
