@@ -1,6 +1,7 @@
 # Store this code in 'app.py' file
 import biceps.biceps_detection_function as mpa 
 import barbell_row.detection_function as barbell
+import squat.squat_detection as squat
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 import json
@@ -162,9 +163,8 @@ def analyze_barbell_row():
     return jsonify(results)
 
 
-
-@app.route('/analyze_biceps', methods=['POST']) 
-def analyze_biceps():
+@app.route('/analyze_squat', methods=['POST']) 
+def analyze_squat():
     # Get the video from the request 
     video = request.files['video']
     user_id= int(request.form["user_id"])
@@ -173,7 +173,7 @@ def analyze_biceps():
     video.save('video.mp4')  
     
     # Analyze the video 
-    left_arm_count, right_arm_count, left_arm_errors, right_arm_errors, prediction_probability = mpa.analyze_video('video.mp4')
+    knees_inward_error_ratio_percent,knees_forward_errors_ratio_percent,left_counter,right_counter = squat.analyze_squat('video.mp4')
 #     {
 #     "Lean_too_far_back": 12.743972445464976,
 #     "left_arm_count": 13,
@@ -187,6 +187,59 @@ def analyze_biceps():
 #         "PEAK_CONTRACTION": 0
 #     }
 # }
+    
+    import datetime
+
+    current_time = datetime.datetime.now()
+
+
+
+#save evaluation result
+###   user_id,leftcounter,right counter,exercise_id
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute('INSERT INTO exercise_eveluation_results VALUES ( null,%s, %s, %s, %s, %s)', (user_id, exercise_id, left_counter, right_counter,current_time ))
+    
+    mysql.connection.commit()
+        
+#get id of inserted evaluation
+    eval_id=cursor.lastrowid
+    print("eval",eval_id)
+#get errors of exercise from exercise_errors table
+    # cursor.execute('SELECT id FROM exercise_error WHERE exercise_id = %s', (exercise_id,))
+    # exercise_errors = cursor.fetchall()
+#for each error insert into evaluation error result table (error_id,error_value)
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute('INSERT INTO exercise_error_results VALUES ( null,%s, %s, %s,%s )', (8, eval_id, knees_forward_errors_ratio_percent,"" ))
+    cursor.execute('INSERT INTO exercise_error_results VALUES ( null,%s, %s, %s,%s )', (9, eval_id, knees_inward_error_ratio_percent,"" ))
+
+    mysql.connection.commit()
+
+
+    # Return the analysis results 
+    results = {
+        'left_count': left_counter,
+        'right_count': right_counter,
+        'knees_forward_errors_ratio_percent': knees_forward_errors_ratio_percent,
+        'knees_inward_error_ratio_percent': knees_inward_error_ratio_percent,
+    }
+    
+    return jsonify(results)
+
+
+@app.route('/analyze_biceps', methods=['POST']) 
+def analyze_biceps():
+    # Get the video from the request 
+    video = request.files['video']
+    user_id= int(request.form["user_id"])
+    exercise_id=int(request.form["exercise_id"])
+    # Save the video to a file
+    video.save('video.mp4')  
+    
+    # Analyze the video 
+    left_arm_count, right_arm_count, left_arm_errors, right_arm_errors, prediction_probability = mpa.analyze_video('video.mp4')
+
     
     import datetime
 
