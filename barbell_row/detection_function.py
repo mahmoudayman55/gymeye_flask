@@ -102,12 +102,7 @@ VIDEO_PATH1 = "v3.mp4"
 
 
 # Load input scaler
-with open("input_scaler_lumbar.pkl", "rb") as f:
-    input_scaler_lumbar = pickle.load(f)
-    
-# Load input scaler
-with open("input_scaler_torso.pkl", "rb") as f:
-    input_scaler_torso = pickle.load(f)
+
 
 
 # In[38]:
@@ -115,8 +110,7 @@ with open("input_scaler_torso.pkl", "rb") as f:
 
 from tensorflow.keras.models import load_model
 # Load model
-lumbar_model = load_model("barbell_lumbar_dp.h5")
-torso_model = load_model("barbell_torso_dp.h5")
+
 
 
 # In[41]:
@@ -203,12 +197,18 @@ t_detected=False
 l_detected=False
 
 def analyzeBarbellRow(video):
-    
+    lumbar_model = load_model("E:/graduation/try flask/gym_eye/barbell_row/barbell_lumbar_dp.h5")
+    torso_model = load_model("E:/graduation/try flask/gym_eye/barbell_row/barbell_torso_dp.h5")
+    with open("E:/graduation/try flask/gym_eye/barbell_row/input_scaler_lumbar.pkl", "rb") as f:
+        input_scaler_lumbar = pickle.load(f)
+
+# Load input scaler
+    with open("E:/graduation/try flask/gym_eye/barbell_row/input_scaler_torso.pkl", "rb") as f:
+        input_scaler_torso = pickle.load(f)
     cap = cv2.VideoCapture(video)
     with mp_pose.Pose(min_detection_confidence=0.5, min_tracking_confidence=0.5) as pose:
         while cap.isOpened():
             ret, image = cap.read()
-
             if not ret:
                 break
 
@@ -239,9 +239,6 @@ def analyzeBarbellRow(video):
                 
                 (left_barbell_row_angle) = left_arm_analysis.analyze_pose(landmarks=landmarks, frame=image)
                 (right_barbell_row_angle) = right_arm_analysis.analyze_pose(landmarks=landmarks, frame=image)
-
-                
-                
                 # Extract keypoints from frame for the input
                 row = extract_important_keypoints(results)
                 X = pd.DataFrame([row, ], columns=HEADERS[1:])
@@ -290,90 +287,52 @@ def analyzeBarbellRow(video):
                         t_detected=True                 
                 else:
                     current_stage_T = "UNK"
-                    
-                                
-                # Status box
-                cv2.rectangle(image, (0, 0), (900, 60), (245, 117, 16), -1)
-
-                # Display Right Arm Counter
-                cv2.putText(image, "RIGHT ARM", (10, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(right_arm_analysis.counter) if right_arm_analysis.is_visible else "UNK", (130, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Left Arm Counter
-                cv2.putText(image, "LEFT ARM", (230, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(left_arm_analysis.counter) if left_arm_analysis.is_visible else "UNK", (350, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Lumbar Stage
-                cv2.putText(image, "LUMBAR STAGE", (470, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, current_stage_L, (670, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Torso Stage
-                cv2.putText(image, "TORSO STAGE", (790, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, current_stage_T, (890, 25), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Lumbar Class
-                cv2.putText(image, "LUMBAR CLASS", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(predicted_class_L), (130, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Torso Class
-                cv2.putText(image, "TORSO CLASS", (230, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(predicted_class_T), (350, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Lumbar Probability
-                cv2.putText(image, "LUMBAR PROB", (470, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(round(prediction_probability_L, 2)), (670, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-
-                # Display Torso Probability
-                cv2.putText(image, "TORSO PROB", (790, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 2, cv2.LINE_AA)
-                cv2.putText(image, str(round(prediction_probability_T, 2)), (890, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2, cv2.LINE_AA)
-                            
+                        
             except Exception as e:
                 print(f"Error: {e}")
             
-            cv2.imshow("CV2", image)
             
-            # Press Q to close cv2 window
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break
             
     cap.release()
     cv2.destroyAllWindows()
 
     for i in range (1, 5):
         cv2.waitKey(1)
+    left_counter = left_arm_analysis.counter
+    right_counter = right_arm_analysis.counter
+    l_num_zeros = lValues.count(0)
+    l_num_ones = lValues.count(1)
+    l_ratio = l_num_zeros / (l_num_ones + l_num_zeros)
+    l_ratio_percent = l_ratio * 100
+    t_num_zeros = tValues.count(0)
+    t_num_ones = tValues.count(1)
+    t_ratio = t_num_zeros / (t_num_ones + t_num_zeros)
+    t_ratio_percent = t_ratio * 100
+    return left_counter,right_counter,l_ratio_percent,t_ratio_percent
 
 
 
 
 
-import json
+# import json
 
-# Define the variables
-left_counter = left_arm_analysis.counter
-right_counter = right_arm_analysis.counter
-l_num_zeros = lValues.count(0)
-l_num_ones = lValues.count(1)
-l_ratio = l_num_zeros / (l_num_ones + l_num_zeros)
-l_ratio_percent = l_ratio * 100
-t_num_zeros = tValues.count(0)
-t_num_ones = tValues.count(1)
-t_ratio = t_num_zeros / (t_num_ones + t_num_zeros)
-t_ratio_percent = t_ratio * 100
-print(lValues.count(0))
-print(lValues.count(1))
-# Create a Python dictionary with the values
-data = {
-    "left_counter": left_counter,
-    "right_counter": right_counter,
-    "l_ratio_percent": l_ratio_percent,
-    "t_ratio_percent": t_ratio_percent
-}
+# # Define the variables
 
-# Convert the dictionary to a JSON object
-json_data = json.dumps(data)
+# print(lValues.count(0))
+# print(lValues.count(1))
+# # Create a Python dictionary with the values
+# data = {
+#     "left_counter": left_counter,
+#     "right_counter": right_counter,
+#     "l_ratio_percent": l_ratio_percent,
+#     "t_ratio_percent": t_ratio_percent
+# }
 
-# Print the JSON object
-print(json_data)
+# # Convert the dictionary to a JSON object
+# json_data = json.dumps(data)
+
+# # Print the JSON object
+# print(json_data)
 
 
 

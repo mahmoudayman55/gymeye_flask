@@ -1,5 +1,6 @@
 # Store this code in 'app.py' file
-import biceps_detection_function as mpa 
+import biceps.biceps_detection_function as mpa 
+import barbell_row.detection_function as barbell
 from flask import Flask, jsonify, render_template, request, redirect, url_for, session
 from flask_mysqldb import MySQL
 import json
@@ -95,8 +96,75 @@ import MySQLdb.cursors
 
 
 
+@app.route('/analyze_barbell_row', methods=['POST']) 
+def analyze_barbell_row():
+    # Get the video from the request 
+    video = request.files['video']
+    user_id= int(request.form["user_id"])
+    exercise_id=int(request.form["exercise_id"])
+    # Save the video to a file
+    video.save('video.mp4')  
+    
+    # Analyze the video 
+    left_counter,right_counter,l_ratio_percent,t_ratio_percent = barbell.analyzeBarbellRow('video.mp4')
+#     {
+#     "Lean_too_far_back": 12.743972445464976,
+#     "left_arm_count": 13,
+#     "left_arm_errors": {
+#         "LOOSE_UPPER_ARM": 0,
+#         "PEAK_CONTRACTION": 0
+#     },
+#     "right_arm_count": 0,
+#     "right_arm_errors": {
+#         "LOOSE_UPPER_ARM": 0,
+#         "PEAK_CONTRACTION": 0
+#     }
+# }
+    
+    import datetime
+
+    current_time = datetime.datetime.now()
+
+
+
+#save evaluation result
+###   user_id,leftcounter,right counter,exercise_id
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute('INSERT INTO exercise_eveluation_results VALUES ( null,%s, %s, %s, %s, %s)', (user_id, exercise_id, left_counter, right_counter,current_time ))
+    
+    mysql.connection.commit()
+        
+#get id of inserted evaluation
+    eval_id=cursor.lastrowid
+    print("eval",eval_id)
+#get errors of exercise from exercise_errors table
+    # cursor.execute('SELECT id FROM exercise_error WHERE exercise_id = %s', (exercise_id,))
+    # exercise_errors = cursor.fetchall()
+#for each error insert into evaluation error result table (error_id,error_value)
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    cursor.execute('INSERT INTO exercise_error_results VALUES ( null,%s, %s, %s,%s )', (6, eval_id, l_ratio_percent,"" ))
+    cursor.execute('INSERT INTO exercise_error_results VALUES ( null,%s, %s, %s,%s )', (7, eval_id, t_ratio_percent,"" ))
+
+    mysql.connection.commit()
+
+
+
+    # Return the analysis results 
+    results = {
+        'left_count': left_counter,
+        'right_count': right_counter,
+        'l_ratio': l_ratio_percent,
+        't_ratio': t_ratio_percent,
+    }
+    
+    return jsonify(results)
+
+
+
 @app.route('/analyze_biceps', methods=['POST']) 
-def analyze_video():
+def analyze_biceps():
     # Get the video from the request 
     video = request.files['video']
     user_id= int(request.form["user_id"])

@@ -196,17 +196,18 @@ class BicepPoseAnalysis:
 
 
 # Load input scaler
-with open("E:/graduation/try flask/gym_eye/input_scaler.pkl", "rb") as f:
-    input_scaler = pickle.load(f)
+
 
 
 
 from tensorflow.keras.models import load_model
 # Load model
-DL_model = load_model("E:/graduation/try flask/gym_eye/bicep_dp.h5")
+
 
 def analyze_video(video_path):
-        
+    with open("E:/graduation/try flask/gym_eye//biceps/input_scaler.pkl", "rb") as f:
+        input_scaler = pickle.load(f)      
+    DL_model = load_model("E:/graduation/try flask/gym_eye/biceps/bicep_dp.h5")  
     cap = cv2.VideoCapture(video_path)
 
     VISIBILITY_THRESHOLD = 0.65
