@@ -8,7 +8,9 @@ import json
 import MySQLdb.cursors
 import re
 import jwt
-
+import re
+import json
+import MySQLdb.cursors
 app = Flask(__name__)
 
 
@@ -91,10 +93,84 @@ def login():
 
 
 
-import re
-import json
-import MySQLdb.cursors
+###########################BMI##################
+#############save bmi
+# Create a new route to handle BMI data storage
+@app.route('/bmi', methods=['POST'])
+def bmi():
+    # Get the data from the POST request
+    data = json.loads(request.data.decode('utf-8'))
 
+    # Extract the data and store it in variables
+    user_id = data['user_id']
+    age = data    ['age']
+    weight = data ['weight']
+    water = data['water']
+    protein = data['protein']
+    fat = data['fat']
+    gender = data['gender']
+    daily_activity_level = data['daily_activity_level']
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+
+    # Create a cursor object to interact with the database
+
+    # Execute the SQL query to insert the data into the table
+    sql_query = "INSERT INTO bmi (user_id, age, weight, water, protein, fat, daily_activity_level,gender) VALUES (%s, %s, %s, %s, %s, %s, %s,%s)"
+    values = (user_id, age, weight, water, protein, fat, daily_activity_level,gender)
+    cursor.execute(sql_query, values)
+
+    # Commit the changes to the database
+    mysql.connection.commit()
+
+    # Close the cursor and return a success message
+    cursor.close()
+    return jsonify({'message': 'BMI data saved successfully'}), 200
+
+
+
+############get all bmi
+@app.route('/get_all_bmi', methods=['GET'])
+def get_all_bmi():
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    cursor.execute('SELECT id, user_id, age, weight, water, protein, fat, daily_activity_level, gender FROM bmi ')
+    bmis = cursor.fetchall()
+    cursor.close()
+
+    return jsonify(bmis),200
+
+
+
+############get bmi by id
+@app.route('/bmi/<int:bmi_id>', methods=['GET'])
+def get_bmi(bmi_id):
+    cursor = mysql.connection.cursor(MySQLdb.cursors.DictCursor)
+    
+    # Get BMI information
+    cursor.execute('SELECT id, user_id, age, weight, water, protein, fat, daily_activity_level FROM bmi WHERE id = %s', (bmi_id,))
+    bmi = cursor.fetchone()
+    
+    if not bmi:
+        cursor.close()
+        return jsonify({'error': 'BMI not found'}), 404
+    
+    cursor.close()
+
+    return jsonify(bmi)
+
+
+########################################
+
+
+
+@app.route('/evaluate_video', methods=['Post'])
+def test():
+    id=int(request.form["exercise_id"])
+    if id ==1:
+        return analyze_biceps()
+    if id ==2:
+      return  analyze_barbell_row()
+    if id==3:
+       return analyze_squat()
 
 
 @app.route('/analyze_barbell_row', methods=['POST']) 
@@ -108,19 +184,7 @@ def analyze_barbell_row():
     
     # Analyze the video 
     left_counter,right_counter,l_ratio_percent,t_ratio_percent = barbell.analyzeBarbellRow('video.mp4')
-#     {
-#     "Lean_too_far_back": 12.743972445464976,
-#     "left_arm_count": 13,
-#     "left_arm_errors": {
-#         "LOOSE_UPPER_ARM": 0,
-#         "PEAK_CONTRACTION": 0
-#     },
-#     "right_arm_count": 0,
-#     "right_arm_errors": {
-#         "LOOSE_UPPER_ARM": 0,
-#         "PEAK_CONTRACTION": 0
-#     }
-# }
+
     
     import datetime
 
@@ -150,14 +214,21 @@ def analyze_barbell_row():
 
     mysql.connection.commit()
 
-
-
     # Return the analysis results 
     results = {
+        "id":eval_id,
+        "exercise_id":exercise_id,
+        "exercise_name":"Barbell Row",
+        "date":current_time,
         'left_count': left_counter,
         'right_count': right_counter,
-        'l_ratio': l_ratio_percent,
-        't_ratio': t_ratio_percent,
+   "errors": 
+       [ 
+        {"name":"l_ratio",'value': l_ratio_percent,"screenshot":""},
+        {"name":"t_ratio",'value': t_ratio_percent,"screenshot":""},
+        
+        ],
+
     }
     
     return jsonify(results)
@@ -174,19 +245,7 @@ def analyze_squat():
     
     # Analyze the video 
     knees_inward_error_ratio_percent,knees_forward_errors_ratio_percent,left_counter,right_counter = squat.analyze_squat('video.mp4')
-#     {
-#     "Lean_too_far_back": 12.743972445464976,
-#     "left_arm_count": 13,
-#     "left_arm_errors": {
-#         "LOOSE_UPPER_ARM": 0,
-#         "PEAK_CONTRACTION": 0
-#     },
-#     "right_arm_count": 0,
-#     "right_arm_errors": {
-#         "LOOSE_UPPER_ARM": 0,
-#         "PEAK_CONTRACTION": 0
-#     }
-# }
+
     
     import datetime
 
@@ -218,13 +277,21 @@ def analyze_squat():
 
 
     # Return the analysis results 
-    results = {
+    results ={
+        "id":eval_id,
+        "exercise_id":exercise_id,
+        "exercise_name":"Squat",
+        "date":current_time,
         'left_count': left_counter,
         'right_count': right_counter,
-        'knees_forward_errors_ratio_percent': knees_forward_errors_ratio_percent,
-        'knees_inward_error_ratio_percent': knees_inward_error_ratio_percent,
+   "errors": 
+       [ 
+        {"name":"Knees Forward",'value': knees_forward_errors_ratio_percent,"screenshot":""},
+        {"name":"Knees Inward",'value': knees_inward_error_ratio_percent,"screenshot":""},
+        
+        ],
+
     }
-    
     return jsonify(results)
 
 
@@ -325,4 +392,4 @@ def register():
 
 
 if __name__ == '__main__':
-    app.run(host='192.168.1.55',port=5000)
+    app.run(host='192.168.8.108',port=5000)
